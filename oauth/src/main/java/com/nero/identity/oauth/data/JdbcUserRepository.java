@@ -1,15 +1,15 @@
 package com.nero.identity.oauth.data;
 
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
-import java.util.HashMap;
-import java.util.Map;
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
-import org.springframework.jdbc.datasource.AbstractDataSource;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Repository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.EmptyResultDataAccessException;
+import org.springframework.jdbc.support.KeyHolder;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
 
 @Repository
 public class JdbcUserRepository implements UserRepository {
@@ -24,28 +24,42 @@ public class JdbcUserRepository implements UserRepository {
 	
 	@Override
 	public User findUser(String username) {
-		return jdbc.queryForObject(
-				"select * from AuthUser where username=?",
-				this::mapRowToUser,
-				username
-				);
+		try {
+			return jdbc.queryForObject(
+					"select * from AuthUser where username=?",
+					this::mapRowToUser,
+					username
+					);
+		} catch(EmptyResultDataAccessException ex) {
+			return null;
+		}
+
 	}
 
 	@Override
 	public User findUser(Long id) {
-		return jdbc.queryForObject(
-				"select * from AuthUser where id=?",
-				this::mapRowToUser,
-				id
-				);
+		try {
+			return jdbc.queryForObject(
+					"select * from AuthUser where id=?",
+					this::mapRowToUser,
+					id
+					);			
+		} catch (EmptyResultDataAccessException ex) {
+			return null;
+		}
 	}
 
 	@Override
 	public User saveUser(User user) {
-		jdbc.update(
-				"insert into AuthUser(username, password) values(?,?)",
-				user.getUsername(),
-				passwordEncoder.encode(user.getPassword()));
+		KeyHolder keyHolder = new GeneratedKeyHolder();
+		String sql = "insert into AuthUser(username, password) values(?,?)";
+		jdbc.update(connection -> {
+			PreparedStatement ps = connection.prepareStatement(sql, new String[] {"id"});
+			ps.setString(1, user.getUsername());
+			ps.setString(2, user.getPassword());
+			return ps;
+		}, keyHolder);
+		user.setId(keyHolder.getKey().longValue());
 		return user;
 	}
 	

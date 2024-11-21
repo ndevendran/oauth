@@ -1,6 +1,7 @@
 package com.nero.identity.oauth;
 
 import java.security.SecureRandom;
+import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
@@ -39,6 +40,12 @@ public class AuthorizationController {
 		int numBytes = 25;
 		String secret = generateClientSecret(numBytes);
 		client.setClientSecret(secret);
+		UUID clientId = UUID.randomUUID();
+		while(this.clientRepo.findClient(clientId.toString()) != null){
+			clientId = UUID.randomUUID();
+		}
+		
+		client.setClientId(clientId);
 		return this.clientRepo.saveClient(client);
 	}
 
@@ -52,15 +59,22 @@ public class AuthorizationController {
     }
     
     @PostMapping("/user/register")
-    public ResponseEntity<String> registerUser(@RequestBody User user) {
-    	userRepo.saveUser(user);
-    	return new ResponseEntity<>(user.getUsername(), HttpStatus.OK);
+    public ResponseEntity<User> registerUser(@RequestBody User user) {
+    	if(user.getUsername() == null) {
+    		return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+    	}
+    	
+    	if(user.getPassword() == null) {
+    		return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+    	}
+    	User savedUser = userRepo.saveUser(user);
+    	return new ResponseEntity<>(savedUser, HttpStatus.OK);
     }
     
     @GetMapping("/user")
-    public ResponseEntity<User> getUser(@RequestBody String username){
-    	User user = userRepo.findUser(username);
-    	return new ResponseEntity<>(user, HttpStatus.OK);
+    public ResponseEntity<User> getUser(@RequestBody User user){
+    	User dbUser = userRepo.findUser(user.getUsername());
+    	return new ResponseEntity<>(dbUser, HttpStatus.OK);
     }
     
     @PostMapping("/user/login")
@@ -75,9 +89,9 @@ public class AuthorizationController {
     		return new ResponseEntity<>("Error", HttpStatus.BAD_REQUEST);
     	}
     	
-    	String encodedPassword = passwordEncoder.encode(user.getPassword());
+    	boolean isMatch = passwordEncoder.matches(retrievedUser.getPassword(), user.getPassword());
     	
-    	if(!retrievedUser.getPassword().equals(encodedPassword)) {
+    	if(!isMatch) {
     		return new ResponseEntity<>("Access Denied!", HttpStatus.UNAUTHORIZED);
     	}
     	
@@ -100,6 +114,16 @@ public class AuthorizationController {
     			+ "redirectUri=" + redirectUri + ";" 
     			+ "clientId=" + clientId + ";";
     	
+    	return new ResponseEntity<>(response, HttpStatus.OK);
+    }
+    
+    @GetMapping("/approve")
+    public ResponseEntity<String> approve(HttpSession session){
+    	String response = "";
+    	response = response + session.getAttribute("grantType") + ";";
+    	response = response + session.getAttribute("authorizationCode") + ";";
+    	response = response + session.getAttribute("redirectUri") + ";";
+    	response = response + session.getAttribute("clientId") + ";";
     	return new ResponseEntity<>(response, HttpStatus.OK);
     }
 }
