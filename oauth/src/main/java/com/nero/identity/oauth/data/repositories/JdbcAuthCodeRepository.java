@@ -21,16 +21,15 @@ public class JdbcAuthCodeRepository implements AuthCodeRepository {
 	}
 	
 	@Override
-	public boolean verifyCode(String authorizationCode) {
+	public AuthCode verifyCode(String authorizationCode) {
 		try {
-			jdbc.queryForObject(
+			return jdbc.queryForObject(
 					"select * from AuthCode where authorizationCode=?",
 					this::mapRowToAuthCode,
 					authorizationCode
 					);
-			return true;
 		} catch(EmptyResultDataAccessException ex) {
-			return false;
+			return null;
 		}
 	}
 
@@ -50,5 +49,12 @@ public class JdbcAuthCodeRepository implements AuthCodeRepository {
 			code.setClientId(rs.getString("clientId"));
 			return code;
 		}
+
+	@Override
+	public boolean deleteCode(String authorizationCode) {
+		// TODO Auto-generated method stub
+		String sql = "delete from AuthCode where authorizationCode=?";
+		return jdbc.update(sql, authorizationCode) == 1;
+	}
 
 }

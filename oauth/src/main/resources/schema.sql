@@ -16,3 +16,8 @@ create table if not exists AuthCode (
 	authorizationCode varchar(36) not null,
 	clientId varchar(36) not null
 );
+
+create table if not exists Token (
+	token varchar(36) not null,
+	clientId varchar(36) not null
+);

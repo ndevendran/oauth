@@ -4,6 +4,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.Base64;
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,10 +22,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.nero.identity.oauth.data.Client;
+import com.nero.identity.oauth.data.Token;
 import com.nero.identity.oauth.data.AuthCode;
 import com.nero.identity.oauth.data.User;
 import com.nero.identity.oauth.data.repositories.AuthCodeRepository;
 import com.nero.identity.oauth.data.repositories.ClientRepository;
+import com.nero.identity.oauth.data.repositories.TokenRepository;
 import com.nero.identity.oauth.data.repositories.UserRepository;
 import com.nero.identity.oauth.service.UserService;
 import org.springframework.web.util.UriComponentsBuilder;
@@ -37,17 +40,20 @@ public class AuthorizationController {
 	private UserRepository userRepo;
 	private UserService userService;
 	private AuthCodeRepository codeRepo;
+	private TokenRepository tokenRepo;
 	
 	@Autowired
 	public AuthorizationController(ClientRepository clientRepo,
 			UserRepository userRepo,
 			PasswordEncoder encoder,
 			UserService userService,
-			AuthCodeRepository codeRepo) {
+			AuthCodeRepository codeRepo,
+			TokenRepository tokenRepo) {
 		this.clientRepo = clientRepo;
 		this.userRepo = userRepo;
 		this.userService = userService;
 		this.codeRepo = codeRepo;
+		this.tokenRepo = tokenRepo;
 	}
 	
 	@PostMapping("/client/register")
@@ -157,7 +163,7 @@ public class AuthorizationController {
     	
     	UUID authorizationCode = UUID.randomUUID();
     	
-    	while(codeRepo.verifyCode(authorizationCode.toString())) {
+    	while(codeRepo.verifyCode(authorizationCode.toString()) != null) {
     		authorizationCode = UUID.randomUUID();
     	}
     	
@@ -183,8 +189,14 @@ public class AuthorizationController {
     
     @GetMapping("/token")
     @ResponseBody
-    public ResponseEntity<String> token(@RequestHeader(value = "Authorization", required = false) String authHeader, 
-    		String client_id, String client_secret, String grant_type){
+    public ResponseEntity<String> token(@RequestHeader(value = "Authorization", required = false) String authHeader,
+    		@RequestBody Map<String, String> requestBody){
+    	
+    	String client_id = requestBody.get("client_id");
+    	String client_secret = requestBody.get("client_secret");
+    	String grant_type = requestBody.get("grant_type");
+    	String code = requestBody.get("code");
+    	
     	String clientId = null;
     	String clientSecret = null;
     	if(authHeader != null && authHeader.startsWith("Basic ")) {
@@ -212,20 +224,32 @@ public class AuthorizationController {
     	
     	Client client = clientRepo.findClient(clientId);
     	if(client == null) {
-    		return new ResponseEntity<>("Invalid Client", HttpStatus.BAD_REQUEST);
+    		return new ResponseEntity<>("invalid_client", HttpStatus.BAD_REQUEST);
     	}
     	
     	if(!client.getClientSecret().equals(clientSecret)) {
-    		return new ResponseEntity<>("Invalid Client", HttpStatus.BAD_REQUEST);		
+    		return new ResponseEntity<>("invalid_client", HttpStatus.BAD_REQUEST);		
     	}
     	
     	if(grant_type != null && grant_type.equals("authorization_code")) {
+    		AuthCode storedCode = this.codeRepo.verifyCode(code);
+    		this.codeRepo.deleteCode(code);
     		
+    		if(storedCode.getClientId().equals(clientId)) {
+    			String token = UUID.randomUUID().toString();
+    			while(tokenRepo.getToken(token) != null) {
+    				token = UUID.randomUUID().toString();
+    			}
+    			Token dbToken = new Token();
+    			dbToken.setToken(token);
+    			dbToken.setClientId(clientId);
+    			tokenRepo.save(dbToken);
+    			return new ResponseEntity<>(token, HttpStatus.OK);
+    		} else {
+    			return new ResponseEntity<>("invalid_grant", HttpStatus.BAD_REQUEST);
+    		}
     	} else {
-    		return new ResponseEntity<>("Invalid Client", HttpStatus.BAD_REQUEST);	
+    		return new ResponseEntity<>("unsupported_grant_type: " + grant_type, HttpStatus.BAD_REQUEST);	
     	}
-    	
-    	
-    	return new ResponseEntity<>("Hi", HttpStatus.OK);
     }
 }
