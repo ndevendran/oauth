@@ -1,4 +1,4 @@
-package com.nero.identity.oauth.data;
+package com.nero.identity.oauth.data.repositories;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -6,6 +6,9 @@ import java.sql.SQLException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Repository;
+
+import com.nero.identity.oauth.data.User;
+
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.support.KeyHolder;
@@ -26,7 +29,7 @@ public class JdbcUserRepository implements UserRepository {
 	public User findUser(String username) {
 		try {
 			return jdbc.queryForObject(
-					"select * from AuthUser where username=?",
+					"select * from \"User\" where username=?",
 					this::mapRowToUser,
 					username
 					);
@@ -40,7 +43,7 @@ public class JdbcUserRepository implements UserRepository {
 	public User findUser(Long id) {
 		try {
 			return jdbc.queryForObject(
-					"select * from AuthUser where id=?",
+					"select * from \"User\" where id=?",
 					this::mapRowToUser,
 					id
 					);			
@@ -52,7 +55,7 @@ public class JdbcUserRepository implements UserRepository {
 	@Override
 	public User saveUser(User user) {
 		KeyHolder keyHolder = new GeneratedKeyHolder();
-		String sql = "insert into AuthUser(username, password) values(?,?)";
+		String sql = "insert into \"User\"(username, password) values(?,?)";
 		jdbc.update(connection -> {
 			PreparedStatement ps = connection.prepareStatement(sql, new String[] {"id"});
 			ps.setString(1, user.getUsername());

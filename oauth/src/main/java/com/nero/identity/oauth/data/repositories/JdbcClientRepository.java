@@ -1,4 +1,4 @@
-package com.nero.identity.oauth.data;
+package com.nero.identity.oauth.data.repositories;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -9,6 +9,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
+
+import com.nero.identity.oauth.data.Client;
+
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 
@@ -54,7 +57,6 @@ public class JdbcClientRepository implements ClientRepository {
 	private Client mapRowToClient(ResultSet rs, int rowNum)
 		throws SQLException {
 		Client holder = new Client();
-		holder.setId(rs.getLong("id"));
 		holder.setClientId(UUID.fromString(rs.getString("clientId")));
 		holder.setClientSecret(rs.getString("clientSecret"));
 		holder.setRedirectUri(rs.getString("redirectUri"));
