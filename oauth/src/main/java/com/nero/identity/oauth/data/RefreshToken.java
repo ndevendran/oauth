@@ -5,9 +5,10 @@ import java.util.Date;
 import lombok.Data;
 
 @Data
-public class Token {
+public class RefreshToken {
 	private Long id;
-	private String token;
+	private Long tokenId;
+	private String refreshToken;
 	private String clientId;
 	private Date expirationTime;
 }

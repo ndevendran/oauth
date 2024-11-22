@@ -1,4 +1,4 @@
-package com.nero.identity.oauth.data.repositories;
+package com.nero.identity.oauth.data.repositories.impl;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -9,6 +9,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 import com.nero.identity.oauth.data.AuthCode;
+import com.nero.identity.oauth.data.repositories.AuthCodeRepository;
 
 
 @Repository

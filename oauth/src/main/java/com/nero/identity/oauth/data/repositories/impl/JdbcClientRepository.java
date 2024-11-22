@@ -1,4 +1,4 @@
-package com.nero.identity.oauth.data.repositories;
+package com.nero.identity.oauth.data.repositories.impl;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -11,6 +11,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 import com.nero.identity.oauth.data.Client;
+import com.nero.identity.oauth.data.repositories.ClientRepository;
 
 import org.springframework.jdbc.support.KeyHolder;
 import org.springframework.jdbc.support.GeneratedKeyHolder;

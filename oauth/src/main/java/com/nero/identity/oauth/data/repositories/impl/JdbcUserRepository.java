@@ -1,4 +1,4 @@
-package com.nero.identity.oauth.data.repositories;
+package com.nero.identity.oauth.data.repositories.impl;
 
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -8,6 +8,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Repository;
 
 import com.nero.identity.oauth.data.User;
+import com.nero.identity.oauth.data.repositories.UserRepository;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.dao.EmptyResultDataAccessException;

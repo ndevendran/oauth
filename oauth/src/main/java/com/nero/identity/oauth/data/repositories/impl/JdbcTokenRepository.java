@@ -1,5 +1,7 @@
-package com.nero.identity.oauth.data.repositories;
+package com.nero.identity.oauth.data.repositories.impl;
 
+import java.sql.Date;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 
@@ -9,6 +11,9 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
 
 import com.nero.identity.oauth.data.Token;
+import com.nero.identity.oauth.data.repositories.TokenRepository;
+import org.springframework.jdbc.support.KeyHolder;
+import org.springframework.jdbc.support.GeneratedKeyHolder;
 
 @Repository
 public class JdbcTokenRepository implements TokenRepository {
@@ -37,8 +42,17 @@ public class JdbcTokenRepository implements TokenRepository {
 
 	@Override
 	public Token save(Token token) {
-		String sql = "insert into Token(token, clientId, expirationTime) values(?,?, ?)";
-		jdbc.update(sql, token.getToken(), token.getClientId(), token.getExpirationTime());
+		KeyHolder keyHolder = new GeneratedKeyHolder();
+
+		String sql = "insert into Token(token, clientId, expirationTime) values(?,?,?)";
+        jdbc.update(connection -> {
+            PreparedStatement ps = connection.prepareStatement(sql, new String[]{"id"});
+            ps.setString(1, token.getToken());
+            ps.setString(2, token.getClientId());
+            ps.setDate(3, (Date) token.getExpirationTime());
+            return ps;
+        }, keyHolder);
+        token.setId(keyHolder.getKey().longValue());
 		return token;
 	}
 
