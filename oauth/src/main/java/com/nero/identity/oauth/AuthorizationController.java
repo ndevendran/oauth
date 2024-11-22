@@ -4,6 +4,7 @@ import java.net.URI;
 import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
 import java.util.Base64;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 
@@ -11,7 +12,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -23,12 +23,10 @@ import org.springframework.web.bind.annotation.ResponseBody;
 
 import com.nero.identity.oauth.data.Client;
 import com.nero.identity.oauth.data.Token;
-import com.nero.identity.oauth.data.AuthCode;
 import com.nero.identity.oauth.data.User;
-import com.nero.identity.oauth.data.repositories.AuthCodeRepository;
 import com.nero.identity.oauth.data.repositories.ClientRepository;
-import com.nero.identity.oauth.data.repositories.TokenRepository;
 import com.nero.identity.oauth.data.repositories.UserRepository;
+import com.nero.identity.oauth.service.TokenService;
 import com.nero.identity.oauth.service.UserService;
 import org.springframework.web.util.UriComponentsBuilder;
 
@@ -39,21 +37,17 @@ public class AuthorizationController {
 	private ClientRepository clientRepo;
 	private UserRepository userRepo;
 	private UserService userService;
-	private AuthCodeRepository codeRepo;
-	private TokenRepository tokenRepo;
+	private TokenService tokenService;
 	
 	@Autowired
 	public AuthorizationController(ClientRepository clientRepo,
 			UserRepository userRepo,
-			PasswordEncoder encoder,
 			UserService userService,
-			AuthCodeRepository codeRepo,
-			TokenRepository tokenRepo) {
+			TokenService tokenService) {
 		this.clientRepo = clientRepo;
 		this.userRepo = userRepo;
 		this.userService = userService;
-		this.codeRepo = codeRepo;
-		this.tokenRepo = tokenRepo;
+		this.tokenService = tokenService;
 	}
 	
 	@PostMapping("/client/register")
@@ -143,48 +137,28 @@ public class AuthorizationController {
     @ResponseBody
     public ResponseEntity<String> approve(String username, String password, HttpSession session){
 		HttpHeaders headers = new HttpHeaders();
+		Map<String, String> queryParams = new HashMap<>();
 		
     	if(!userService.login(username, password)) {
-    		String errorMessage = "access_denied. username: " + username + " password: " + password;
-    	  	String redirectUrl = UriComponentsBuilder.fromHttpUrl((String) session.getAttribute("redirectUri"))
-    		  		.queryParam("error", errorMessage).toUriString();
-    			headers.setLocation(URI.create(redirectUrl));
-    		return new ResponseEntity<>(headers, HttpStatus.FOUND);
+    		String errorMessage = "access_denied";
+    		queryParams.put("error", errorMessage);
     	}
     	
     	String responseType = (String) session.getAttribute("responseType");
     	
-    	if(!responseType.equals("code")) {
-    	  	String redirectUrl = UriComponentsBuilder.fromHttpUrl((String) session.getAttribute("redirectUri"))
-    		  		.queryParam("error", "unsupported_response_type").toUriString();
-    			headers.setLocation(URI.create(redirectUrl));
-    		return new ResponseEntity<>(headers, HttpStatus.FOUND);    		
+    	if(responseType.equals("code")) {
+        	String savedCode = tokenService.handleAuthorizationCode((String) session.getAttribute("clientId"));
+        	queryParams.put("code", savedCode);
+    	} else {
+    		queryParams.put("error", "unsupported_response_type");     		
     	}
     	
-    	UUID authorizationCode = UUID.randomUUID();
-    	
-    	while(codeRepo.verifyCode(authorizationCode.toString()) != null) {
-    		authorizationCode = UUID.randomUUID();
-    	}
-    	
-    	
-    	AuthCode code = new AuthCode();
-    	code.setAuthorizationCode(authorizationCode.toString());
-    	code.setClientId((String) session.getAttribute("clientId"));
-    	
-    	String savedCode = codeRepo.saveCode(code);
-    	
-    	
-	  	UriComponentsBuilder redirectUri = UriComponentsBuilder.fromHttpUrl((String) session.getAttribute("redirectUri"))
-		  		.queryParam("code", savedCode);
-	  	
-	  	if(session.getAttribute("state") != null) {
-	  		redirectUri.queryParam("state", session.getAttribute("state"));
-	  	}
-	  	
-	  	headers.setLocation(URI.create(redirectUri.toUriString()));
-    	
-    	return new ResponseEntity<>(headers, HttpStatus.FOUND);
+    	UriComponentsBuilder redirectUrlBuilder = UriComponentsBuilder.fromHttpUrl((String) session.getAttribute("redirectUri"));
+    	queryParams.forEach((key,value) -> redirectUrlBuilder.queryParam(key, value));
+    	String redirectUrl = redirectUrlBuilder.toUriString();
+    	headers.setLocation(URI.create(redirectUrl));
+    	return new ResponseEntity<>(headers, HttpStatus.FOUND);    
+
     }
     
     @GetMapping("/token")
@@ -232,19 +206,9 @@ public class AuthorizationController {
     	}
     	
     	if(grant_type != null && grant_type.equals("authorization_code")) {
-    		AuthCode storedCode = this.codeRepo.verifyCode(code);
-    		this.codeRepo.deleteCode(code);
-    		
-    		if(storedCode.getClientId().equals(clientId)) {
-    			String token = UUID.randomUUID().toString();
-    			while(tokenRepo.getToken(token) != null) {
-    				token = UUID.randomUUID().toString();
-    			}
-    			Token dbToken = new Token();
-    			dbToken.setToken(token);
-    			dbToken.setClientId(clientId);
-    			tokenRepo.save(dbToken);
-    			return new ResponseEntity<>(token, HttpStatus.OK);
+    		Token dbToken = this.tokenService.handleAuthorizationCode(code, clientId);
+    		if(dbToken != null) {
+    			return new ResponseEntity<>(dbToken.getToken(), HttpStatus.OK);
     		} else {
     			return new ResponseEntity<>("invalid_grant", HttpStatus.BAD_REQUEST);
     		}
