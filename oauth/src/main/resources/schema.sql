@@ -19,5 +19,6 @@ create table if not exists AuthCode (
 
 create table if not exists Token (
 	token varchar(36) not null,
-	clientId varchar(36) not null
+	clientId varchar(36) not null,
+	expirationTime DATETIME not null
 );

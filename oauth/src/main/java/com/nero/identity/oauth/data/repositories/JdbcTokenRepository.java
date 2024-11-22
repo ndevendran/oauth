@@ -37,8 +37,8 @@ public class JdbcTokenRepository implements TokenRepository {
 
 	@Override
 	public Token save(Token token) {
-		String sql = "insert into Token(token, clientId) values(?,?)";
-		jdbc.update(sql, token.getToken(), token.getClientId());
+		String sql = "insert into Token(token, clientId, expirationTime) values(?,?, ?)";
+		jdbc.update(sql, token.getToken(), token.getClientId(), token.getExpirationTime());
 		return token;
 	}
 
@@ -47,6 +47,7 @@ public class JdbcTokenRepository implements TokenRepository {
 			Token token = new Token();
 			token.setToken(rs.getString("token"));
 			token.setClientId(rs.getString("clientId"));
+			token.setExpirationTime(rs.getDate("expirationTime"));
 			return token;
 		}
 

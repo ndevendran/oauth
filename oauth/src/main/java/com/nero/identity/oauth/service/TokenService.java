@@ -1,5 +1,7 @@
 package com.nero.identity.oauth.service;
 
+import java.time.Instant;
+import java.util.Date;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
@@ -35,6 +37,9 @@ public class TokenService {
 			Token dbToken = new Token();
 			dbToken.setToken(token);
 			dbToken.setClientId(clientId);
+
+			Date expirationTime = Date.from(Instant.now().plusSeconds(604800));
+			dbToken.setExpirationTime(expirationTime);
 			tokenRepo.save(dbToken);
 			return dbToken;
 		} else {

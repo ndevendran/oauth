@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseBody;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nero.identity.oauth.data.Client;
 import com.nero.identity.oauth.data.Token;
 import com.nero.identity.oauth.data.User;
@@ -149,6 +150,10 @@ public class AuthorizationController {
     	if(responseType.equals("code")) {
         	String savedCode = tokenService.handleAuthorizationCode((String) session.getAttribute("clientId"));
         	queryParams.put("code", savedCode);
+        	Object state = session.getAttribute("state");
+        	if(state != null) {
+        		queryParams.put("state", (String) state);
+        	}
     	} else {
     		queryParams.put("error", "unsupported_response_type");     		
     	}
@@ -170,6 +175,7 @@ public class AuthorizationController {
     	String client_secret = requestBody.get("client_secret");
     	String grant_type = requestBody.get("grant_type");
     	String code = requestBody.get("code");
+    	ObjectMapper jsonParser = new ObjectMapper();
     	
     	String clientId = null;
     	String clientSecret = null;
@@ -184,11 +190,11 @@ public class AuthorizationController {
             clientSecret = clientDetails.length > 1 ? clientDetails[1] : "";
     	}
     	if(client_id == null && clientId == null) {
-    		return new ResponseEntity<>("Invalid Client", HttpStatus.BAD_REQUEST);
+    		return new ResponseEntity<>("invalid_client", HttpStatus.BAD_REQUEST);
     	}
     	
     	if(client_id != null && clientId != null) {
-    		return new ResponseEntity<>("Invalid Client", HttpStatus.BAD_REQUEST);
+    		return new ResponseEntity<>("invalid_client", HttpStatus.BAD_REQUEST);
     	}
     	
     	if(clientId == null) {
@@ -204,11 +210,21 @@ public class AuthorizationController {
     	if(!client.getClientSecret().equals(clientSecret)) {
     		return new ResponseEntity<>("invalid_client", HttpStatus.BAD_REQUEST);		
     	}
+    	if(grant_type == null) {
+    		return new ResponseEntity<>("no_grant_type", HttpStatus.BAD_REQUEST);
+    	}
     	
-    	if(grant_type != null && grant_type.equals("authorization_code")) {
+    	if(grant_type.equals("authorization_code")) {
     		Token dbToken = this.tokenService.handleAuthorizationCode(code, clientId);
     		if(dbToken != null) {
-    			return new ResponseEntity<>(dbToken.getToken(), HttpStatus.OK);
+    			String jsonResponse = null;
+    			try {
+    				jsonResponse = jsonParser.writeValueAsString(dbToken);
+    			} catch(Exception e) {
+    				return new ResponseEntity<>(dbToken.getToken(), HttpStatus.OK);
+    			}
+
+    			return new ResponseEntity<>(jsonResponse, HttpStatus.OK);
     		} else {
     			return new ResponseEntity<>("invalid_grant", HttpStatus.BAD_REQUEST);
     		}
