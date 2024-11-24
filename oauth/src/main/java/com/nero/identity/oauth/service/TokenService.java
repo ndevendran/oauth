@@ -1,28 +1,32 @@
 package com.nero.identity.oauth.service;
 
+import java.sql.Date;
 import java.time.Instant;
-import java.util.Date;
+
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
+import com.nero.identity.oauth.data.AccessToken;
 import com.nero.identity.oauth.data.AuthCode;
+import com.nero.identity.oauth.data.RefreshToken;
 import com.nero.identity.oauth.data.Token;
+import com.nero.identity.oauth.data.repositories.AccessTokenRepository;
 import com.nero.identity.oauth.data.repositories.AuthCodeRepository;
-import com.nero.identity.oauth.data.repositories.TokenRepository;
+import com.nero.identity.oauth.data.repositories.RefreshTokenRepository;
 
 @Service
 public class TokenService {
 	private AuthCodeRepository codeRepo;
-	private TokenRepository tokenRepo;
+	private AccessTokenRepository accessTokenRepo;
+	private RefreshTokenRepository refreshTokenRepo;
 
 	@Autowired
-	public TokenService(AuthCodeRepository codeRepo, TokenRepository tokenRepo) {
+	public TokenService(AuthCodeRepository codeRepo, AccessTokenRepository accessTokenRepo, RefreshTokenRepository refreshTokenRepo) {
 		this.codeRepo = codeRepo;
-		this.tokenRepo = tokenRepo;
+		this.accessTokenRepo = accessTokenRepo;
+		this.refreshTokenRepo = refreshTokenRepo;
 	}
 	
 	public Token handleAuthorizationCode(String code, String clientId) {
@@ -31,16 +35,37 @@ public class TokenService {
 		
 		if(storedCode.getClientId().equals(clientId)) {
 			String token = UUID.randomUUID().toString();
-			while(tokenRepo.getToken(token) != null) {
+			while(accessTokenRepo.getToken(token) != null) {
 				token = UUID.randomUUID().toString();
 			}
-			Token dbToken = new Token();
-			dbToken.setToken(token);
-			dbToken.setClientId(clientId);
+						
+			AccessToken accessToken = new AccessToken();
+			accessToken.setToken(token);
+			accessToken.setClientId(clientId);
 
-			Date expirationTime = Date.from(Instant.now().plusSeconds(604800));
-			dbToken.setExpirationTime(expirationTime);
-			tokenRepo.save(dbToken);
+
+			Date expirationTime = new Date(Date.from(Instant.now().plusSeconds(86400)).getTime());
+			accessToken.setExpirationTime(expirationTime);
+			accessToken = accessTokenRepo.save(accessToken);
+			
+			//generate refresh token
+			token = UUID.randomUUID().toString();
+			while(refreshTokenRepo.getRefreshToken(token) != null) {
+				token = UUID.randomUUID().toString();
+			}
+			expirationTime = new Date(Date.from(Instant.now().plusSeconds(604800)).getTime());
+			RefreshToken refreshToken = new RefreshToken();
+			refreshToken.setToken(token);
+			refreshToken.setClientId(clientId);
+			refreshToken.setExpirationTime(expirationTime);
+			
+			refreshToken = refreshTokenRepo.saveRefreshToken(refreshToken);
+			refreshTokenRepo.updateRefreshTokenWithNewAccessToken(refreshToken.getId(), accessToken.getId());
+			
+			Token dbToken = new Token();
+			dbToken.setAccessToken(accessToken);
+			dbToken.setRefreshToken(refreshToken);
+			
 			return dbToken;
 		} else {
 			return null;

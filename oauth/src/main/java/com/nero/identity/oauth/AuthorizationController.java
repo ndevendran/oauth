@@ -221,13 +221,16 @@ public class AuthorizationController {
     			try {
     				jsonResponse = jsonParser.writeValueAsString(dbToken);
     			} catch(Exception e) {
-    				return new ResponseEntity<>(dbToken.getToken(), HttpStatus.OK);
+    				return new ResponseEntity<>(dbToken.getAccessToken().getToken(), HttpStatus.OK);
     			}
 
     			return new ResponseEntity<>(jsonResponse, HttpStatus.OK);
     		} else {
     			return new ResponseEntity<>("invalid_grant", HttpStatus.BAD_REQUEST);
     		}
+    	} else if(grant_type.equals("refresh_token")) {
+    		//this.tokenService.handleRefreshToken();
+    		return new ResponseEntity<>("place_holder", HttpStatus.BAD_REQUEST);
     	} else {
     		return new ResponseEntity<>("unsupported_grant_type: " + grant_type, HttpStatus.BAD_REQUEST);	
     	}

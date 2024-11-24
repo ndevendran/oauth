@@ -17,7 +17,7 @@ create table if not exists AuthCode (
 	clientId varchar(36) not null
 );
 
-create table if not exists Token (
+create table if not exists AccessToken (
 	id identity,
 	token varchar(36) not null,
 	clientId varchar(36) not null,
@@ -31,13 +31,13 @@ create table if not exists RefreshToken (
 	expirationTime DATETIME not null
 );
 
-create table if not exists RefreshToken_Token (
+create table if not exists RefreshToken_AccessToken (
 	refreshToken bigint not null,
 	token bigint not null
 );
 
-alter table RefreshToken_Token
+alter table RefreshToken_AccessToken
 	add foreign key(refreshToken) references RefreshToken(id);
 
-alter table RefreshToken_Token
-	add foreign key(token) references Token(id);
+alter table RefreshToken_AccessToken
+	add foreign key(token) references AccessToken(id);

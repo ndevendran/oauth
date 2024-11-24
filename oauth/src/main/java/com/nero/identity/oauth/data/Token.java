@@ -6,8 +6,6 @@ import lombok.Data;
 
 @Data
 public class Token {
-	private Long id;
-	private String token;
-	private String clientId;
-	private Date expirationTime;
+	private AccessToken accessToken;
+	private RefreshToken refreshToken;
 }
