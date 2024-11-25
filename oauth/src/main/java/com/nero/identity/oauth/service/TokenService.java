@@ -105,14 +105,18 @@ public class TokenService {
 		AccessToken accessToken = new AccessToken();
 		accessToken.setToken(token);
 		accessToken.setClientId(dbRefreshToken.getClientId());
-
-
 		Date expirationTime = new Date(Date.from(Instant.now().plusSeconds(86400)).getTime());
 		accessToken.setExpirationTime(expirationTime);
 		accessToken = accessTokenRepo.save(accessToken);
 		
+		//get reference to old access token id before we change binding
+		Long oldAccessTokenId = refreshTokenRepo.getAccessTokenId(dbRefreshToken.getId());
+		
 		//bind access token to refresh token
 		refreshTokenRepo.updateRefreshTokenWithNewAccessToken(dbRefreshToken.getId(), accessToken.getId());
+		
+		//now we can delete old access token
+		accessTokenRepo.deleteToken(oldAccessTokenId);
 		
 		//create the new token object and return it
 		Token tokenResponse = new Token();

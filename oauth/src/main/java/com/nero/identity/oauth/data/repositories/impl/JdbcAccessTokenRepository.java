@@ -37,9 +37,9 @@ public class JdbcAccessTokenRepository implements AccessTokenRepository {
 	}
 
 	@Override
-	public Boolean deleteToken(String token) {
-		String sql = "delete from AccessToken where token=?";
-		return jdbc.update(sql, token) == 1;
+	public Boolean deleteToken(Long tokenId) {
+		String sql = "delete from AccessToken where id=?";
+		return jdbc.update(sql, tokenId) == 1;
 	}
 
 	@Override

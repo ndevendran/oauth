@@ -1,9 +1,7 @@
 package com.nero.identity.oauth;
 
 import java.net.URI;
-import java.nio.charset.StandardCharsets;
 import java.security.SecureRandom;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;

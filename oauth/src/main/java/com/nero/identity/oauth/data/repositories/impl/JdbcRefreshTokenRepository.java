@@ -69,5 +69,21 @@ public class JdbcRefreshTokenRepository implements RefreshTokenRepository {
 			refreshToken.setExpirationTime(rs.getDate("expirationTime"));
 			return refreshToken;
 		}
+	
+	private Long mapRowToLong(ResultSet rs, int rowNum)
+		throws SQLException {
+		Long token = rs.getLong("token");
+		return token;
+	}
+
+	@Override
+	public Long getAccessTokenId(Long refreshTokenId) {
+		String sql = "select * from RefreshToken_AccessToken where refreshToken=?";
+		try {
+			return jdbc.queryForObject(sql, this::mapRowToLong, refreshTokenId);
+		} catch(EmptyResultDataAccessException ex) {
+			return null;
+		}
+	}
 
 }
