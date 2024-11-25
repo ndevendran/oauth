@@ -24,6 +24,7 @@ import org.springframework.web.bind.annotation.ResponseBody;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.nero.identity.oauth.data.Client;
 import com.nero.identity.oauth.data.Token;
+import com.nero.identity.oauth.data.TokenRequest;
 import com.nero.identity.oauth.data.User;
 import com.nero.identity.oauth.data.repositories.ClientRepository;
 import com.nero.identity.oauth.data.repositories.UserRepository;
@@ -171,49 +172,17 @@ public class AuthorizationController {
     public ResponseEntity<String> token(@RequestHeader(value = "Authorization", required = false) String authHeader,
     		@RequestBody Map<String, String> requestBody){
     	
-    	String client_id = requestBody.get("client_id");
-    	String client_secret = requestBody.get("client_secret");
-    	String grant_type = requestBody.get("grant_type");
-    	String code = requestBody.get("code");
     	ObjectMapper jsonParser = new ObjectMapper();
+    	TokenRequest request = tokenService.parseTokenRequest(requestBody, authHeader);
     	
-    	String clientId = null;
-    	String clientSecret = null;
-    	if(authHeader != null && authHeader.startsWith("Basic ")) {
-            String base64Credentials = authHeader.substring(6);
-            byte[] decodedBytes = Base64.getDecoder().decode(base64Credentials);
-            String credentials = new String(decodedBytes, StandardCharsets.UTF_8);
-
-            // Split into username and password
-            String[] clientDetails = credentials.split(":", 2);
-            clientId = clientDetails[0];
-            clientSecret = clientDetails.length > 1 ? clientDetails[1] : "";
+    	if(request.isError()) {
+    		return new ResponseEntity<>(request.getErrorMessage(), HttpStatus.BAD_REQUEST);
     	}
     	
-    	if(client_id == null && clientId == null) {
-    		return new ResponseEntity<>("invalid_client", HttpStatus.BAD_REQUEST);
-    	}
-    	
-    	if(client_id != null && clientId != null) {
-    		return new ResponseEntity<>("invalid_client", HttpStatus.BAD_REQUEST);
-    	}
-    	
-    	if(clientId == null) {
-    		clientId = client_id;
-    		clientSecret = client_secret;
-    	}
-    	
-    	Client client = clientRepo.findClient(clientId);
-    	if(client == null) {
-    		return new ResponseEntity<>("invalid_client", HttpStatus.BAD_REQUEST);
-    	}
-    	
-    	if(!client.getClientSecret().equals(clientSecret)) {
-    		return new ResponseEntity<>("invalid_client", HttpStatus.BAD_REQUEST);		
-    	}
-    	if(grant_type == null) {
-    		return new ResponseEntity<>("no_grant_type", HttpStatus.BAD_REQUEST);
-    	}
+    	String grant_type = request.getGrantType();
+    	String code = request.getCode();
+    	String clientId = request.getClientId();
+    	String clientSecret = request.getClientSecret()
     	
     	if(grant_type.equals("authorization_code")) {
     		Token dbToken = this.tokenService.handleAuthorizationCode(code, clientId);
