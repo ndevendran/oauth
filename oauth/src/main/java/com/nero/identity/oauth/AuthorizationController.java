@@ -182,7 +182,7 @@ public class AuthorizationController {
     	String grant_type = request.getGrantType();
     	String code = request.getCode();
     	String clientId = request.getClientId();
-    	String clientSecret = request.getClientSecret()
+    	String clientSecret = request.getClientSecret();
     	
     	if(grant_type.equals("authorization_code")) {
     		Token dbToken = this.tokenService.handleAuthorizationCode(code, clientId);
