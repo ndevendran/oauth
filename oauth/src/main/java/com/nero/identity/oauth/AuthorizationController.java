@@ -189,6 +189,7 @@ public class AuthorizationController {
             clientId = clientDetails[0];
             clientSecret = clientDetails.length > 1 ? clientDetails[1] : "";
     	}
+    	
     	if(client_id == null && clientId == null) {
     		return new ResponseEntity<>("invalid_client", HttpStatus.BAD_REQUEST);
     	}
@@ -229,8 +230,20 @@ public class AuthorizationController {
     			return new ResponseEntity<>("invalid_grant", HttpStatus.BAD_REQUEST);
     		}
     	} else if(grant_type.equals("refresh_token")) {
-    		//this.tokenService.handleRefreshToken();
-    		return new ResponseEntity<>("place_holder", HttpStatus.BAD_REQUEST);
+    		String refreshToken = requestBody.get("refreshToken");
+    		Token dbToken = this.tokenService.handleRefreshToken(refreshToken);
+    		if(dbToken != null) {
+    			String jsonResponse = null;
+    			try {
+    				jsonResponse = jsonParser.writeValueAsString(dbToken);
+    			} catch(Exception e) {
+    				return new ResponseEntity<>(dbToken.getAccessToken().getToken(), HttpStatus.OK);
+    			}
+
+    			return new ResponseEntity<>(jsonResponse, HttpStatus.OK);
+    		} else {
+    			return new ResponseEntity<>("invalid_grant", HttpStatus.BAD_REQUEST);
+    		}
     	} else {
     		return new ResponseEntity<>("unsupported_grant_type: " + grant_type, HttpStatus.BAD_REQUEST);	
     	}

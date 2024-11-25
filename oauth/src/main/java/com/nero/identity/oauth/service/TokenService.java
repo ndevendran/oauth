@@ -72,6 +72,46 @@ public class TokenService {
 		}
 	}
 	
+	public Token handleRefreshToken(String refreshToken) {
+		RefreshToken dbRefreshToken = refreshTokenRepo.getRefreshToken(refreshToken);
+		
+		//check refresh token exists
+		if(dbRefreshToken == null) {
+			return null;
+		}
+		
+		//check expiration date
+		if(dbRefreshToken.getExpirationTime().before(new java.util.Date()))
+		{
+			return null;
+		}
+		
+		//if everything is good generate a new access token
+		String token = UUID.randomUUID().toString();
+		while(accessTokenRepo.getToken(token) != null) {
+			token = UUID.randomUUID().toString();
+		}
+					
+		AccessToken accessToken = new AccessToken();
+		accessToken.setToken(token);
+		accessToken.setClientId(dbRefreshToken.getClientId());
+
+
+		Date expirationTime = new Date(Date.from(Instant.now().plusSeconds(86400)).getTime());
+		accessToken.setExpirationTime(expirationTime);
+		accessToken = accessTokenRepo.save(accessToken);
+		
+		//bind access token to refresh token
+		refreshTokenRepo.updateRefreshTokenWithNewAccessToken(dbRefreshToken.getId(), accessToken.getId());
+		
+		//create the new token object and return it
+		Token tokenResponse = new Token();
+		tokenResponse.setAccessToken(accessToken);
+		tokenResponse.setRefreshToken(dbRefreshToken);
+		
+		return tokenResponse;
+	}
+	
 	public String handleAuthorizationCode(String clientId) {
 		UUID authorizationCode = UUID.randomUUID();
     	
