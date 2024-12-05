@@ -30,7 +30,7 @@ public class JdbcClientRepository implements ClientRepository {
 	public Client findClient(String clientId) {
 		try {
 			return jdbc.queryForObject(
-					"select clientId, clientSecret, clientName, redirectUri from Client where clientId=?", 
+					"select clientId, clientSecret, clientName, redirectUri, scope from Client where clientId=?", 
 					this::mapRowToClient,
 					clientId);
 		} catch (EmptyResultDataAccessException ex) {
@@ -42,13 +42,14 @@ public class JdbcClientRepository implements ClientRepository {
 	@Override
 	public Client saveClient(Client client) {
 		KeyHolder keyHolder = new GeneratedKeyHolder();
-		String sql = "insert into Client(clientId, clientSecret, redirectUri, clientName) values(?,?,?,?)";
+		String sql = "insert into Client(clientId, clientSecret, redirectUri, clientName, scope) values(?,?,?,?,?)";
         jdbc.update(connection -> {
             PreparedStatement ps = connection.prepareStatement(sql, new String[]{"id"});
             ps.setString(1, client.getClientId().toString());
             ps.setString(2, client.getClientSecret());
             ps.setString(3, client.getRedirectUri());
             ps.setString(4, client.getClientName());
+            ps.setString(5, client.getScope());
             return ps;
         }, keyHolder);
         client.setId(keyHolder.getKey().longValue());
@@ -62,6 +63,7 @@ public class JdbcClientRepository implements ClientRepository {
 		holder.setClientSecret(rs.getString("clientSecret"));
 		holder.setRedirectUri(rs.getString("redirectUri"));
 		holder.setClientName(rs.getString("clientName"));
+		holder.setScope(rs.getString("scope"));
 		return holder;
 	}
 

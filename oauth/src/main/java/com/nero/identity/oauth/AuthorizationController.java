@@ -2,7 +2,9 @@ package com.nero.identity.oauth;
 
 import java.net.URI;
 import java.security.SecureRandom;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 
@@ -108,6 +110,7 @@ public class AuthorizationController {
     		@RequestParam String redirectUri,
     		@RequestParam String state,
     		@RequestParam String responseType,
+    		@RequestParam(required=false) String scope,
     		HttpSession session,
     		Model model) {
     	
@@ -116,7 +119,9 @@ public class AuthorizationController {
     	session.setAttribute("redirectUri", redirectUri);
     	session.setAttribute("clientId", clientId);
 
+
     	Client client = this.clientRepo.findClient(clientId);
+    	
     	if(client == null) {
     		model.addAttribute("errorMessage", "Invalid Client");
     		return "error";
@@ -128,6 +133,29 @@ public class AuthorizationController {
     		return "error";
     	}
     	
+    	List<String> rscope = null;
+    	List<String> cscope;
+    	
+    	if(scope != null) {
+    		if(client.getScope() == null) {
+        		model.addAttribute("errorMessage", "Invalid Scope");
+        		return "error";
+    		}
+        	cscope = Arrays.asList(client.getScope().split(" "));
+    		rscope = Arrays.asList(scope.split(" "));
+        	
+    		if(!cscope.containsAll(rscope)) {
+        		model.addAttribute("errorMessage", "Invalid Scope");
+        		return "error";
+        	}
+    		
+
+    	}
+    	
+    	if(rscope != null) {
+    		model.addAttribute("rscope", rscope.toArray());
+    	}
+
 
     	
     	return "login";
@@ -180,7 +208,6 @@ public class AuthorizationController {
     	String grant_type = request.getGrantType();
     	String code = request.getCode();
     	String clientId = request.getClientId();
-    	String clientSecret = request.getClientSecret();
     	
     	if(grant_type.equals("authorization_code")) {
     		Token dbToken = this.tokenService.handleAuthorizationCode(code, clientId);

@@ -12,6 +12,16 @@
         <label for="password">Password:</label>
         <input type="password" id="password" name="password" required>
         <br>
+		<div th:each="scope : ${rscope}">
+			<input name="scope"
+				type="checkbox"
+				th:value="${scope}"
+			/>
+			<span th:text="${scope}">
+				SCOPE
+			</span>
+			<br/>
+		</div>
         <button type="submit">Login</button>
     </form>
 </body>

@@ -15,10 +15,14 @@ public class WebSecurityConfig {
 	@Bean
 	public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http.authorizeHttpRequests((requests) ->
-                requests.anyRequest().permitAll()
+                requests.requestMatchers("/h2-console/**").permitAll()
+                .anyRequest().permitAll()
         )
         .csrf(csrf -> csrf.ignoringRequestMatchers("/client/**")
-        		.ignoringRequestMatchers("/user/**"));
+        		.ignoringRequestMatchers("/user/**")
+        		.ignoringRequestMatchers("/h2-console/**")
+        )
+        .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.disable()));
 		
 		return http.build();
 	}

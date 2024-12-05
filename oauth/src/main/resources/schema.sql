@@ -3,7 +3,8 @@ create table if not exists Client (
 	clientId varchar(36) not null,
 	clientSecret varchar(36) not null,
 	clientName varchar(25) not null,
-	redirectUri varchar(2048) not null
+	redirectUri varchar(2048) not null,
+	scope varchar(60000)
 );
 
 create table if not exists "User" (

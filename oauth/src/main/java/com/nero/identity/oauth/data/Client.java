@@ -11,4 +11,5 @@ public class Client {
 	private String clientSecret;
 	private String clientName;
 	private String redirectUri;
+	private String scope;
 }
