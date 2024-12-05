@@ -186,7 +186,7 @@ public class AuthorizationController {
         		queryParams.put("error", errorMessage);
         		isError = true;
         	}else {
-        		session.setAttribute("scope", rscope);
+        		session.setAttribute("scope", String.join(" ", rscope));
         	}  		
     	}
     	
@@ -218,7 +218,7 @@ public class AuthorizationController {
     @GetMapping("/token")
     @ResponseBody
     public ResponseEntity<String> token(@RequestHeader(value = "Authorization", required = false) String authHeader,
-    		@RequestBody Map<String, String> requestBody){
+    		@RequestBody Map<String, String> requestBody, HttpSession session){
     	
     	ObjectMapper jsonParser = new ObjectMapper();
     	TokenRequest request = tokenService.parseTokenRequest(requestBody, authHeader);
@@ -230,9 +230,10 @@ public class AuthorizationController {
     	String grant_type = request.getGrantType();
     	String code = request.getCode();
     	String clientId = request.getClientId();
+    	String scope = (String) session.getAttribute("scope");
     	
     	if(grant_type.equals("authorization_code")) {
-    		Token dbToken = this.tokenService.handleAuthorizationCode(code, clientId);
+    		Token dbToken = this.tokenService.handleAuthorizationCode(code, clientId, scope);
     		if(dbToken != null) {
     			String jsonResponse = null;
     			try {

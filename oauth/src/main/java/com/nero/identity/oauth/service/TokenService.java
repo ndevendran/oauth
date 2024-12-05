@@ -39,7 +39,7 @@ public class TokenService {
 		this.clientRepo = clientRepo;
 	}
 	
-	public Token handleAuthorizationCode(String code, String clientId) {
+	public Token handleAuthorizationCode(String code, String clientId, String scope) {
 		AuthCode storedCode = this.codeRepo.verifyCode(code);
 		this.codeRepo.deleteCode(code);
 		
@@ -52,6 +52,7 @@ public class TokenService {
 			AccessToken accessToken = new AccessToken();
 			accessToken.setToken(token);
 			accessToken.setClientId(clientId);
+			accessToken.setScope(scope);
 
 
 			Date expirationTime = new Date(Date.from(Instant.now().plusSeconds(86400)).getTime());
@@ -68,6 +69,7 @@ public class TokenService {
 			refreshToken.setToken(token);
 			refreshToken.setClientId(clientId);
 			refreshToken.setExpirationTime(expirationTime);
+			refreshToken.setScope(scope);
 			
 			refreshToken = refreshTokenRepo.saveRefreshToken(refreshToken);
 			refreshTokenRepo.updateRefreshTokenWithNewAccessToken(refreshToken.getId(), accessToken.getId());
@@ -105,6 +107,7 @@ public class TokenService {
 		AccessToken accessToken = new AccessToken();
 		accessToken.setToken(token);
 		accessToken.setClientId(dbRefreshToken.getClientId());
+		accessToken.setScope(dbRefreshToken.getScope());
 		Date expirationTime = new Date(Date.from(Instant.now().plusSeconds(86400)).getTime());
 		accessToken.setExpirationTime(expirationTime);
 		accessToken = accessTokenRepo.save(accessToken);
