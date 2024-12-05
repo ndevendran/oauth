@@ -10,4 +10,5 @@ public class AccessToken {
 	private String token;
 	private String clientId;
 	private Date expirationTime;
+	private String scope;
 }

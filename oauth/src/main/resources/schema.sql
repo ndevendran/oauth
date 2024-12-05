@@ -22,14 +22,16 @@ create table if not exists AccessToken (
 	id identity,
 	token varchar(36) not null,
 	clientId varchar(36) not null,
-	expirationTime DATETIME not null
+	expirationTime DATETIME not null,
+	scope varchar(60000)
 );
 
 create table if not exists RefreshToken (
 	id identity,
 	refreshToken varchar(36) not null,
 	clientId varchar(36) not null,
-	expirationTime DATETIME not null
+	expirationTime DATETIME not null,
+	scope varchar(60000)
 );
 
 create table if not exists RefreshToken_AccessToken (

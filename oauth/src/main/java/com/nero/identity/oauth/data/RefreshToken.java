@@ -12,4 +12,5 @@ public class RefreshToken {
 	private String token;
 	private String clientId;
 	private Date expirationTime;
+	private String scope;
 }

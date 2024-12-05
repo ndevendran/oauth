@@ -163,27 +163,49 @@ public class AuthorizationController {
     
     @GetMapping("/approve")
     @ResponseBody
-    public ResponseEntity<String> approve(String username, String password, HttpSession session){
+    public ResponseEntity<String> approve(String username, String password, String[] scope, HttpSession session){
 		HttpHeaders headers = new HttpHeaders();
 		Map<String, String> queryParams = new HashMap<>();
+		
+		String clientId = (String) session.getAttribute("clientId");
+		boolean isError = false;
 		
     	if(!userService.login(username, password)) {
     		String errorMessage = "access_denied";
     		queryParams.put("error", errorMessage);
+    		isError = true;
+    	}
+    	
+    	//Check scope to make sure it's still valid
+    	if(scope != null) {
+    		Client client = this.clientRepo.findClient(clientId);
+    		List<String> cscope = Arrays.asList(client.getScope().split(" "));
+    		List<String> rscope = Arrays.asList(scope);
+    		if(!cscope.containsAll(rscope)) {
+        		String errorMessage = "invalid_scope";
+        		queryParams.put("error", errorMessage);
+        		isError = true;
+        	}else {
+        		session.setAttribute("scope", rscope);
+        	}  		
     	}
     	
     	String responseType = (String) session.getAttribute("responseType");
     	
-    	if(responseType.equals("code")) {
-        	String savedCode = tokenService.handleAuthorizationCode((String) session.getAttribute("clientId"));
-        	queryParams.put("code", savedCode);
-        	Object state = session.getAttribute("state");
-        	if(state != null) {
-        		queryParams.put("state", (String) state);
+    	if(!isError) {
+        	if(responseType.equals("code")) {
+            	String savedCode = tokenService.handleAuthorizationCode(clientId);
+            	queryParams.put("code", savedCode);
+            	Object state = session.getAttribute("state");
+            	if(state != null) {
+            		queryParams.put("state", (String) state);
+            	}
+        	} else {
+        		queryParams.put("error", "unsupported_response_type");
+        		isError = true;
         	}
-    	} else {
-    		queryParams.put("error", "unsupported_response_type");     		
     	}
+
     	
     	UriComponentsBuilder redirectUrlBuilder = UriComponentsBuilder.fromHttpUrl((String) session.getAttribute("redirectUri"));
     	queryParams.forEach((key,value) -> redirectUrlBuilder.queryParam(key, value));

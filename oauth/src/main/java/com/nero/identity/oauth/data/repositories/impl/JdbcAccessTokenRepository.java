@@ -46,12 +46,13 @@ public class JdbcAccessTokenRepository implements AccessTokenRepository {
 	public AccessToken save(AccessToken token) {
 		KeyHolder keyHolder = new GeneratedKeyHolder();
 
-		String sql = "insert into AccessToken(token, clientId, expirationTime) values(?,?,?)";
+		String sql = "insert into AccessToken(token, clientId, expirationTime, scope) values(?,?,?,?)";
         jdbc.update(connection -> {
             PreparedStatement ps = connection.prepareStatement(sql, new String[]{"id"});
             ps.setString(1, token.getToken());
             ps.setString(2, token.getClientId());
             ps.setDate(3, (Date) token.getExpirationTime());
+            ps.setString(4, token.getScope());
             return ps;
         }, keyHolder);
         token.setId(keyHolder.getKey().longValue());
@@ -64,6 +65,7 @@ public class JdbcAccessTokenRepository implements AccessTokenRepository {
 			token.setToken(rs.getString("token"));
 			token.setClientId(rs.getString("clientId"));
 			token.setExpirationTime(rs.getDate("expirationTime"));
+			token.setScope(rs.getString("scope"));
 			return token;
 		}
 

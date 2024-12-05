@@ -37,13 +37,13 @@ public class JdbcRefreshTokenRepository implements RefreshTokenRepository {
 	@Override
 	public RefreshToken saveRefreshToken(RefreshToken refreshToken) {
 		KeyHolder keyHolder = new GeneratedKeyHolder();
-		String sql = "insert into RefreshToken(refreshToken, clientId, expirationTime) values(?,?,?)";
-		String bindSql = "insert into RefreshToken_AccessToken(refreshToken, token) values(?,?)";
+		String sql = "insert into RefreshToken(refreshToken, clientId, expirationTime, scope) values(?,?,?,?)";
         jdbc.update(connection -> {
             PreparedStatement ps = connection.prepareStatement(sql, new String[]{"id"});
             ps.setString(1, refreshToken.getToken());
             ps.setString(2, refreshToken.getClientId());
             ps.setDate(3, (Date) refreshToken.getExpirationTime());
+            ps.setString(4, refreshToken.getScope());
             return ps;
         }, keyHolder);
         refreshToken.setId(keyHolder.getKey().longValue());
@@ -67,6 +67,7 @@ public class JdbcRefreshTokenRepository implements RefreshTokenRepository {
 			refreshToken.setToken(rs.getString("refreshToken"));
 			refreshToken.setClientId(rs.getString("clientId"));
 			refreshToken.setExpirationTime(rs.getDate("expirationTime"));
+			refreshToken.setScope(rs.getString("scope"));
 			return refreshToken;
 		}
 	
