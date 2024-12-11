@@ -85,7 +85,7 @@ public class AuthorizationController {
     		return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
     	}
     	
-    	return new ResponseEntity<>(savedUser, HttpStatus.OK);
+    	return new ResponseEntity<>(savedUser, HttpStatus.CREATED);
     }
     
     @GetMapping("/user")
@@ -161,7 +161,7 @@ public class AuthorizationController {
     	return "login";
     }
     
-    @GetMapping("/approve")
+    @PostMapping("/approve")
     @ResponseBody
     public ResponseEntity<String> approve(String username, String password, String[] scope, HttpSession session){
 		HttpHeaders headers = new HttpHeaders();
