@@ -5,6 +5,5 @@ import lombok.Data;
 @Data
 public class AuthCode {
 	private String authorizationCode;
-	private String token;
 	private String clientId;
 }

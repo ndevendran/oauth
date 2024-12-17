@@ -5,5 +5,5 @@ import com.nero.identity.oauth.data.AuthCode;
 public interface AuthCodeRepository {
 	AuthCode verifyCode(String authorizationCode);
 	boolean deleteCode(String authorizationCode);
-	String saveCode(AuthCode authCode);
+	AuthCode saveCode(AuthCode authCode);
 }

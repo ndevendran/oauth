@@ -3,7 +3,6 @@ package com.nero.identity.oauth;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertAll;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -13,12 +12,10 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.junit.jupiter.api.BeforeAll;
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestMethodOrder;
-import org.junit.jupiter.api.TestReporter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.context.SpringBootTest.WebEnvironment;
@@ -41,8 +38,7 @@ import com.nero.identity.oauth.data.User;
 
 @SpringBootTest(webEnvironment = WebEnvironment.RANDOM_PORT)
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
-@DisplayName("Authorization Code Flow Without Scope")
-public class AuthorizationControllerTest {
+public class AuthWithScopeTest {
 	@LocalServerPort
 	private int port;
 	
@@ -61,7 +57,6 @@ public class AuthorizationControllerTest {
 	private static String refreshToken;
 	private static int state = 5;
 	
-	
 	@BeforeAll
 	static void setUp() {
 		clientName = "stuff";
@@ -72,11 +67,12 @@ public class AuthorizationControllerTest {
 	
 	@Test
 	@Order(1)
-	@DisplayName("Register a Client")
-	void registerClientShouldReturnNewlyCreatedClient() throws Exception {
+	void registerClientWithScopeShouldReturnNewlyCreatedClient() throws Exception {
 		Map<String, String> requestMap = new HashMap<>();
+		String scope = "read write delete";
 		requestMap.put("clientName", clientName);
 		requestMap.put("redirectUri", redirectUri);
+		requestMap.put("scope", scope);
 		
 		ResponseEntity<Client> response = this.restTemplate.postForEntity("http://localhost:" + port + "/client/register", requestMap, Client.class);
 		Client registeredClient = response.getBody();
@@ -85,13 +81,14 @@ public class AuthorizationControllerTest {
 		assertThat(registeredClient.getRedirectUri()).isEqualTo(redirectUri);
 		assertNotNull(registeredClient.getClientId(), "Client ID should not be null");
 		assertNotNull(registeredClient.getClientSecret(), "Client Secret should not be null");
+		assertNotNull(registeredClient.getScope());
+		assertEquals(registeredClient.getScope(), scope);
 		clientId = registeredClient.getClientId().toString();
 		clientSecret = registeredClient.getClientSecret();
 	}
 	
 	@Test
 	@Order(2)
-	@DisplayName("Register a User")
 	void registerUserShouldReturnNewlyCreatedUser() throws Exception {
 		Map<String, String> requestMap = new HashMap<>();
 		requestMap.put("username", username);
@@ -104,14 +101,15 @@ public class AuthorizationControllerTest {
 	
 	@Test
 	@Order(3)
-	@DisplayName("The User goes to Auth Server's Authorization Endpoint. Return Login Page")
-	void getAuthorizationEndpointShouldReturnLoginPage() throws Exception {
+	void getAuthorizationEndpointWithBadScopeShouldReturnErrorPage() throws Exception {
 		String url = "http://localhost:"+port+"/authorization";
 		String uriWithParams = UriComponentsBuilder.fromUriString(url)
 				.queryParam("clientId", clientId)
 				.queryParam("redirectUri", redirectUri)
 				.queryParam("state", state)
 				.queryParam("responseType", "code")
+				.queryParam("scope", "read write clean")
+				.build()
 				.toUriString();
 		
 		ResponseEntity<String> response = this.restTemplate.getForEntity(uriWithParams, String.class);
@@ -119,7 +117,36 @@ public class AuthorizationControllerTest {
 		assertEquals(HttpStatus.OK, response.getStatusCode());	
 		Document doc = Jsoup.parse(response.getBody());
 		String title = doc.title();
+		assertNotNull(title);
+		assertEquals("Error", title);
+		
+		Element header = doc.selectFirst("h1");
+		assertNotNull(header);
+		assertEquals(header.text(), "Invalid Scope");
+	}
+
+	@Test
+	@Order(4)
+	void getAuthorizationEndpointWithGoodScopeShouldReturnLoginPage() throws Exception {
+		String url = "http://localhost:"+port+"/authorization";
+		String uriWithParams = UriComponentsBuilder.fromUriString(url)
+				.queryParam("clientId", clientId)
+				.queryParam("redirectUri", redirectUri)
+				.queryParam("state", state)
+				.queryParam("responseType", "code")
+				.queryParam("scope", "read write")
+				.build()
+				.toUriString();
+		
+		ResponseEntity<String> response = this.restTemplate.getForEntity(uriWithParams, String.class);
+		
+		assertEquals(HttpStatus.OK, response.getStatusCode());	
+		Document doc = Jsoup.parse(response.getBody());
+		String title = doc.title();
+		System.out.println(doc.selectFirst("h1").text());
 		assertEquals("Login", title);
+		
+
 		
 		Element form = doc.selectFirst("form");
 		assertEquals(form.attr("action"), "/approve");
@@ -147,14 +174,15 @@ public class AuthorizationControllerTest {
 	}
 	
 	@Test
-	@Order(4)
-	@DisplayName("Authentication at /approve endpoint should redirect with valid location header")
+	@Order(5)
 	void getApproveEndpointShouldReturnRedirect() throws Exception {
 		String url = "http://localhost:"+port+"/approve";
 		MultiValueMap<String, String> formData = new LinkedMultiValueMap<>();
 		assertNotNull(loginCsrf);
 		formData.add("username", username);
 		formData.add("password", password);
+		formData.add("scope", "read");
+		formData.add("scope", "write");
 
 		
 		HttpHeaders headers = new HttpHeaders();
@@ -181,18 +209,13 @@ public class AuthorizationControllerTest {
 		
 		assertNotNull(authorizationCode);
 		assertNotNull(queryParams.get("state"));
-		
-		assertAll("",
-				() -> assertEquals(queryParams.get("state"), Integer.toString(state))
-		);
 		assertEquals(queryParams.get("state"), Integer.toString(state));
 		cookie = response.getHeaders().getFirst(HttpHeaders.SET_COOKIE);
 	}
-	
+
 	@Test
-	@Order(5)
-	@DisplayName("Send Authorization Code To /token. Should return access and refresh tokens")
-	void getTokenEndpointShouldReturnToken(TestReporter testReporter) throws Exception {
+	@Order(6)
+	void getTokenEndpointShouldReturnToken() throws Exception {
 		String url = "http://localhost:"+port+"/token";
 		Map<String, String> requestMap = new HashMap<>();
 		requestMap.put("grant_type", "authorization_code");
@@ -210,53 +233,11 @@ public class AuthorizationControllerTest {
 		ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
 		assertEquals(HttpStatus.OK, response.getStatusCode());
 		Token responseToken = objectMapper.readValue(response.getBody(), Token.class);
-		
-		testReporter.publishEntry("Status Code", response.getStatusCode().toString());
 		assertNotNull(responseToken);
-		
-		assertAll("Token objects should not be null",
-				() -> assertNotNull(responseToken.getAccessToken()),
-				() -> assertNotNull(responseToken.getRefreshToken())
-		);
-		
-		assertAll("Tokens should not be null",
-			() -> assertNotNull(responseToken.getAccessToken().getToken()),
-			() -> assertNotNull(responseToken.getRefreshToken().getToken())
-		);
-		
+		assertNotNull(responseToken.getAccessToken());
+		assertNotNull(responseToken.getRefreshToken());
+		assertNotNull(responseToken.getAccessToken().getToken());
+		assertNotNull(responseToken.getRefreshToken().getToken());
 		refreshToken = responseToken.getRefreshToken().getToken();
-	}
-
-	@Test
-	@Order(6)
-	@DisplayName("Use refresh token at /token with refresh_token grant type. Should return new access token")
-	void useRefreshTokenAtTokenEndpointShouldReturnNewToken() throws Exception {
-		String url = "http://localhost:"+port+"/token";
-		Map<String, String> requestMap = new HashMap<>();
-		requestMap.put("grant_type", "refresh_token");
-		requestMap.put("refreshToken", refreshToken);
-		requestMap.put("client_id", clientId);
-		requestMap.put("client_secret", clientSecret);
-		
-		ObjectMapper objectMapper = new ObjectMapper();
-		String jsonBody = objectMapper.writeValueAsString(requestMap);
-		
-		HttpHeaders headers = new HttpHeaders();
-		headers.add(HttpHeaders.COOKIE, cookie);
-		headers.setContentType(MediaType.APPLICATION_JSON);
-		HttpEntity<String> entity = new HttpEntity<>(jsonBody, headers);
-		ResponseEntity<String> response = restTemplate.postForEntity(url, entity, String.class);
-		assertEquals(HttpStatus.OK, response.getStatusCode());
-		Token responseToken = objectMapper.readValue(response.getBody(), Token.class);
-		assertNotNull(responseToken);
-		assertAll("Token objects should not be null",
-				() -> assertNotNull(responseToken.getAccessToken()),
-				() -> assertNotNull(responseToken.getRefreshToken())
-		);
-		
-		assertAll("Tokens should not be null",
-			() -> assertNotNull(responseToken.getAccessToken().getToken()),
-			() -> assertNotNull(responseToken.getRefreshToken().getToken())
-		);
 	}
 }

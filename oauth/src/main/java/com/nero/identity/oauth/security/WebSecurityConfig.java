@@ -21,6 +21,7 @@ public class WebSecurityConfig {
         .csrf(csrf -> csrf.ignoringRequestMatchers("/client/**")
         		.ignoringRequestMatchers("/user/**")
         		.ignoringRequestMatchers("/h2-console/**")
+        		.ignoringRequestMatchers("/token/**")
         )
         .headers(headers -> headers.frameOptions(frameOptions -> frameOptions.disable()));
 		

@@ -129,7 +129,7 @@ public class TokenService {
 		return tokenResponse;
 	}
 	
-	public String handleAuthorizationCode(String clientId) {
+	public AuthCode generateAuthorizationCode(String clientId) {
 		UUID authorizationCode = UUID.randomUUID();
     	
     	while(codeRepo.verifyCode(authorizationCode.toString()) != null) {

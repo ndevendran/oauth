@@ -138,7 +138,7 @@ public class AuthorizationController {
     	
     	if(scope != null) {
     		if(client.getScope() == null) {
-        		model.addAttribute("errorMessage", "Invalid Scope");
+        		model.addAttribute("errorMessage", "Invalid Client Scope");
         		return "error";
     		}
         	cscope = Arrays.asList(client.getScope().split(" "));
@@ -194,7 +194,7 @@ public class AuthorizationController {
     	
     	if(!isError) {
         	if(responseType.equals("code")) {
-            	String savedCode = tokenService.handleAuthorizationCode(clientId);
+            	String savedCode = tokenService.generateAuthorizationCode(clientId).getAuthorizationCode();
             	queryParams.put("code", savedCode);
             	Object state = session.getAttribute("state");
             	if(state != null) {
@@ -215,7 +215,7 @@ public class AuthorizationController {
 
     }
     
-    @GetMapping("/token")
+    @PostMapping("/token")
     @ResponseBody
     public ResponseEntity<String> token(@RequestHeader(value = "Authorization", required = false) String authHeader,
     		@RequestBody Map<String, String> requestBody, HttpSession session){

@@ -35,12 +35,12 @@ public class JdbcAuthCodeRepository implements AuthCodeRepository {
 	}
 
 	@Override
-	public String saveCode(AuthCode code) {
+	public AuthCode saveCode(AuthCode code) {
 		jdbc.update("insert into AuthCode(authorizationCode, clientId) values(?,?)",
 				code.getAuthorizationCode(),
 				code.getClientId()
 		);
-		return code.getAuthorizationCode();
+		return code;
 	}
 
 	private AuthCode mapRowToAuthCode(ResultSet rs, int rowNum)
