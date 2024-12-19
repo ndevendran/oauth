@@ -8,6 +8,7 @@ import com.nero.identity.oauth.data.repositories.AccessTokenRepository;
 
 public class StubAccessTokenRepository implements AccessTokenRepository {
 	private Map<Long, AccessToken> database;
+	private Long id = 1L;
 	
 	public StubAccessTokenRepository() {
 		this.database = new HashMap<>();
@@ -35,6 +36,8 @@ public class StubAccessTokenRepository implements AccessTokenRepository {
 
 	@Override
 	public AccessToken save(AccessToken token) {
+		token.setId(id);
+		id++;
 		database.put(token.getId(), token);
 		return token;
 	}

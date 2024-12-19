@@ -8,8 +8,6 @@ import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Service;
 
 import com.nero.identity.oauth.data.AccessToken;
@@ -43,7 +41,7 @@ public class TokenService {
 		AuthCode storedCode = this.codeRepo.verifyCode(code);
 		this.codeRepo.deleteCode(code);
 		
-		if(storedCode.getClientId().equals(clientId)) {
+		if(storedCode != null && storedCode.getClientId().equals(clientId)) {
 			String token = UUID.randomUUID().toString();
 			while(accessTokenRepo.getToken(token) != null) {
 				token = UUID.randomUUID().toString();

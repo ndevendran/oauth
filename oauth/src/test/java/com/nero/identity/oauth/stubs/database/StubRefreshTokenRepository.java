@@ -8,6 +8,7 @@ import com.nero.identity.oauth.data.repositories.RefreshTokenRepository;
 
 public class StubRefreshTokenRepository implements RefreshTokenRepository {
 	private Map<Long, RefreshToken> database;
+	private Long id = 1L;
 	
 	public StubRefreshTokenRepository() {
 		this.database = new HashMap<>();
@@ -27,6 +28,8 @@ public class StubRefreshTokenRepository implements RefreshTokenRepository {
 
 	@Override
 	public RefreshToken saveRefreshToken(RefreshToken refreshToken) {
+		refreshToken.setId(id);
+		id++;
 		database.put(refreshToken.getId(), refreshToken);
 		return refreshToken;
 	}
