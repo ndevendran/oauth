@@ -1,0 +1,4 @@
+true,false,test_grant,test_code,false,NA
+true,true,test_grant,test_code,true,invalid_client
+true,false,null,test_code,true,no_grant_type
+false,false,test_grant,test_code,true,invalid_client

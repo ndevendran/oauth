@@ -10,8 +10,11 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.CsvFileSource;
 
 import com.nero.identity.oauth.data.AccessToken;
 import com.nero.identity.oauth.data.AuthCode;
@@ -32,20 +35,25 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+
 public class TokenServiceTest {
 	private static TokenService tokenService;
-	private static ClientRepository clientRepo;
-	private static AuthCodeRepository authCodeRepo;
+	
+
+	private static ClientRepository mockClientRepo;
+	
+	private static AuthCodeRepository mockAuthCodeRepo;
+	
 	private static UUID clientId = UUID.randomUUID();
 	private static String authorizationCode = "test code";
 	private static String clientSecret = "secret";
 	
 	@BeforeAll
 	public static void setUp() {
-		clientRepo = new StubClientRepository();
-		authCodeRepo = new StubAuthCodeRepository();
-		tokenService = new TokenService(authCodeRepo, 
-				new StubAccessTokenRepository(), new StubRefreshTokenRepository(), clientRepo);
+		mockClientRepo = new StubClientRepository();
+		mockAuthCodeRepo = new StubAuthCodeRepository();
+		tokenService = new TokenService(mockAuthCodeRepo, 
+				new StubAccessTokenRepository(), new StubRefreshTokenRepository(), mockClientRepo);
 	}
 	
 	@BeforeEach
@@ -57,12 +65,13 @@ public class TokenServiceTest {
 		client.setId(1L);
 		client.setRedirectUri("www.fake.com");
 		client.setScope("read write delete");
-		clientRepo.saveClient(client);
-		
+		mockClientRepo.saveClient(client);
+
+
 		AuthCode authCode = new AuthCode();
 		authCode.setClientId(clientId.toString());
 		authCode.setAuthorizationCode(authorizationCode);
-		authCodeRepo.saveCode(authCode);
+		mockAuthCodeRepo.saveCode(authCode);
 	}
 	
 	@Test
@@ -76,65 +85,6 @@ public class TokenServiceTest {
 	public void testHandleRefreshTokenForBadToken() {
 		Token returnedToken = tokenService.handleRefreshToken("this token doesn't exist");
 		assertNull(returnedToken);
-	}
-	
-	@Test
-	public void testParseTokenRequestWithClientIdInAuthHeader() {
-		String credentials = clientId + ":" + clientSecret;
-		String encodedCredentials = Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
-		String authHeader = "Basic " + encodedCredentials;
-		Map<String, String> request = new HashMap<>();
-		request.put("grant_type", "test_grant");
-		request.put("code", "test_code");
-		
-		TokenRequest parsedRequest = tokenService.parseTokenRequest(request, authHeader);
-		assertNotNull(parsedRequest);
-		assertFalse(parsedRequest.isError());
-		assertEquals(parsedRequest.getClientId(), clientId.toString());
-		assertEquals(parsedRequest.getClientSecret(), clientSecret);
-		assertEquals(parsedRequest.getGrantType(), "test_grant");
-		assertEquals(parsedRequest.getCode(), "test_code");
-	}
-	
-	@Test
-	public void testParseTokenRequestWithDuplicateAuthLocations() {
-		String credentials = clientId + ":" + clientSecret;
-		String encodedCredentials = Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
-		String authHeader = "Basic " + encodedCredentials;
-		Map<String, String> request = new HashMap<>();
-		request.put("grant_type", "test_grant");
-		request.put("code", "test_code");
-		request.put("client_id", clientId.toString());
-		request.put("client_secret", clientSecret);
-		TokenRequest parsedRequest = tokenService.parseTokenRequest(request, authHeader);
-		assertNotNull(parsedRequest);
-		assertTrue(parsedRequest.isError());
-		assertEquals(parsedRequest.getErrorMessage(), "invalid_client");
-	}
-	
-	@Test
-	public void testParseTokenRequestWithNoGrantType() {
-		String credentials = clientId + ":" + clientSecret;
-		String encodedCredentials = Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
-		String authHeader = "Basic " + encodedCredentials;
-		Map<String, String> request = new HashMap<>();
-		request.put("code", "test_code");
-		TokenRequest parsedRequest = tokenService.parseTokenRequest(request, authHeader);
-		assertNotNull(parsedRequest);
-		assertTrue(parsedRequest.isError());
-		assertEquals(parsedRequest.getErrorMessage(), "no_grant_type");
-	}
-	
-	@Test
-	public void testParseTokenRequestWithNoCredentials() {
-		Map<String, String> request = new HashMap<>();
-		request.put("code", "test_code");
-		request.put("grant_type", "test_grant");
-		String authHeader = "";
-		TokenRequest parsedRequest = tokenService.parseTokenRequest(request, authHeader);
-		assertNotNull(parsedRequest);
-		assertTrue(parsedRequest.isError());
-		assertEquals(parsedRequest.getErrorMessage(), "invalid_client");
 	}
 	
 	@Test
@@ -158,7 +108,7 @@ public class TokenServiceTest {
 		assertTrue(refreshToken.getExpirationTime().after(Date.from(Instant.now())), "Expiration time for refresh token should be after current time");
 		testReporter.publishEntry(refreshToken.toString());
 		
-		AuthCode oldCode = authCodeRepo.verifyCode(authorizationCode);
+		AuthCode oldCode = mockAuthCodeRepo.verifyCode(authorizationCode);
 		
 		assertNull(oldCode, "Authorization Codes should be deleted after use");
 	}
@@ -175,5 +125,44 @@ public class TokenServiceTest {
 		String scope = "read write";
 		Token token = tokenService.handleAuthorizationCode(authorizationCode, "badClient", scope);
 		assertNull(token, "Service should return no token when an invalid client is used");
+	}
+	
+	@ParameterizedTest
+	@CsvFileSource(resources="/test/parseTokenRequest.csv")
+	void testParseTokenWithParameterizedArguements(boolean basicAuth, boolean bodyAuth, String grantType, String testCode,
+			boolean isError, String errorMessage) {
+		Map<String, String> request = new HashMap<>();
+		String authHeader = "";
+		if(basicAuth) {
+			String credentials = clientId + ":" + clientSecret;
+			String encodedCredentials = Base64.getEncoder().encodeToString(credentials.getBytes(StandardCharsets.UTF_8));
+			authHeader = "Basic " + encodedCredentials;
+		}
+		if(bodyAuth) {
+			request.put("client_id", clientId.toString());
+			request.put("client_secret", clientSecret);
+		}
+		
+		if(!grantType.equals("null")) {
+			request.put("grant_type", grantType);
+		}
+
+		request.put("code", testCode);
+		
+		TokenRequest parsedRequest = tokenService.parseTokenRequest(request, authHeader);
+		
+		assertNotNull(parsedRequest);
+		
+		if(isError) {
+			assertTrue(parsedRequest.isError());
+			assertEquals(parsedRequest.getErrorMessage(), errorMessage);
+		} else {
+			assertFalse(parsedRequest.isError());
+			assertEquals(parsedRequest.getClientId(), clientId.toString());
+			assertEquals(parsedRequest.getClientSecret(), clientSecret);
+			assertEquals(parsedRequest.getGrantType(), grantType);
+			assertEquals(parsedRequest.getCode(), testCode);
+		}
+
 	}
 }
