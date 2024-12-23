@@ -61,7 +61,7 @@ public class AuthWithScopeTest {
 	static void setUp() {
 		clientName = "stuff";
 		redirectUri = "http://www.fake.com/redirect";
-		username = "testUser";
+		username = "testUser2";
 		password = "test";
 	}
 	

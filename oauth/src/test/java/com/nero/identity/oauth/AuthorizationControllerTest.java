@@ -66,7 +66,7 @@ public class AuthorizationControllerTest {
 	static void setUp() {
 		clientName = "stuff";
 		redirectUri = "http://www.fake.com/redirect";
-		username = "testUser";
+		username = "testUser1";
 		password = "test";
 	}
 	
