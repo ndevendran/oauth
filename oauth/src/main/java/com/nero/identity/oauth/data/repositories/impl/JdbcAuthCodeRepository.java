@@ -12,7 +12,7 @@ import com.nero.identity.oauth.data.AuthCode;
 import com.nero.identity.oauth.data.repositories.AuthCodeRepository;
 
 
-@Repository
+//@Repository
 public class JdbcAuthCodeRepository implements AuthCodeRepository {
 	JdbcTemplate jdbc;
 	
