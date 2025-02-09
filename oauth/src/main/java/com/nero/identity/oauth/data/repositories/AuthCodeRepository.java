@@ -13,9 +13,10 @@ public interface AuthCodeRepository extends CrudRepository<AuthCode, Long> {
 //	boolean deleteCode(String authorizationCode);
 //	AuthCode saveCode(AuthCode authCode);
 	List<AuthCode> findAll();
-	List<AuthCode> findByAuthorizationCode(String authorizationCode);
+	AuthCode findByAuthorizationCode(String authorizationCode);
 	List<AuthCode> findAllByOrderByAuthorizationCode();
 	List<AuthCode> findByAuthorizationCodeLike(String authorizationCode);
 	List<AuthCode> findAll(Pageable pageable);
 	List<AuthCode> findAllByOrderByAuthorizationCode(Pageable pageable);
+	void deleteByAuthorizationCode(String authorizationCode);
 }

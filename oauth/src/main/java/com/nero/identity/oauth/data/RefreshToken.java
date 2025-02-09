@@ -4,13 +4,16 @@ package com.nero.identity.oauth.data;
 
 import java.sql.Date;
 
+import jakarta.persistence.Embeddable;
+import jakarta.validation.constraints.NotNull;
 import lombok.Data;
 
 @Data
+@Embeddable
 public class RefreshToken {
-	private Long id;
+	@NotNull
 	private String token;
-	private String clientId;
+	
+	@NotNull
 	private Date expirationTime;
-	private String scope;
 }

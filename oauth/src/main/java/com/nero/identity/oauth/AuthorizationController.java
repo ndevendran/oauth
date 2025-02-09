@@ -59,12 +59,12 @@ public class AuthorizationController {
 		String secret = generateClientSecret(numBytes);
 		client.setClientSecret(secret);
 		UUID clientId = UUID.randomUUID();
-		while(this.clientRepo.findClient(clientId.toString()) != null){
+		while(this.clientRepo.findByClientId(clientId) != null){
 			clientId = UUID.randomUUID();
 		}
 		
 		client.setClientId(clientId);
-		return new ResponseEntity<>(this.clientRepo.saveClient(client), HttpStatus.CREATED);
+		return new ResponseEntity<>(this.clientRepo.save(client), HttpStatus.CREATED);
 	}
 
     public static String generateClientSecret(int numBytes) {
@@ -120,7 +120,7 @@ public class AuthorizationController {
     	session.setAttribute("clientId", clientId);
 
 
-    	Client client = this.clientRepo.findClient(clientId);
+    	Client client = this.clientRepo.findByClientId(UUID.fromString(clientId));
     	
     	if(client == null) {
     		model.addAttribute("errorMessage", "Invalid Client");
@@ -178,7 +178,7 @@ public class AuthorizationController {
     	
     	//Check scope to make sure it's still valid
     	if(scope != null) {
-    		Client client = this.clientRepo.findClient(clientId);
+    		Client client = this.clientRepo.findByClientId(UUID.fromString(clientId));
     		List<String> cscope = Arrays.asList(client.getScope().split(" "));
     		List<String> rscope = Arrays.asList(scope);
     		if(!cscope.containsAll(rscope)) {

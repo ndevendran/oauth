@@ -10,7 +10,6 @@ import java.util.UUID;
 
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.TestReporter;
 import org.junit.jupiter.params.ParameterizedTest;
@@ -28,7 +27,6 @@ import com.nero.identity.oauth.service.TokenService;
 import com.nero.identity.oauth.stubs.database.StubAccessTokenRepository;
 import com.nero.identity.oauth.stubs.database.StubAuthCodeRepository;
 import com.nero.identity.oauth.stubs.database.StubClientRepository;
-import com.nero.identity.oauth.stubs.database.StubRefreshTokenRepository;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -53,7 +51,7 @@ public class TokenServiceTest {
 		mockClientRepo = new StubClientRepository();
 		mockAuthCodeRepo = new StubAuthCodeRepository();
 		tokenService = new TokenService(mockAuthCodeRepo, 
-				new StubAccessTokenRepository(), new StubRefreshTokenRepository(), mockClientRepo);
+				new StubAccessTokenRepository(), mockClientRepo);
 	}
 	
 	@BeforeEach
@@ -65,13 +63,13 @@ public class TokenServiceTest {
 		client.setId(1L);
 		client.setRedirectUri("www.fake.com");
 		client.setScope("read write delete");
-		mockClientRepo.saveClient(client);
+		mockClientRepo.save(client);
 
 
 		AuthCode authCode = new AuthCode();
 		authCode.setClientId(clientId.toString());
 		authCode.setAuthorizationCode(authorizationCode);
-		mockAuthCodeRepo.saveCode(authCode);
+		mockAuthCodeRepo.save(authCode);
 	}
 	
 	@Test
@@ -104,11 +102,10 @@ public class TokenServiceTest {
 		RefreshToken refreshToken = token.getRefreshToken();
 		assertNotNull(refreshToken);
 		assertNotNull(refreshToken.getExpirationTime());
-		assertEquals(refreshToken.getScope(), scope);
 		assertTrue(refreshToken.getExpirationTime().after(Date.from(Instant.now())), "Expiration time for refresh token should be after current time");
 		testReporter.publishEntry(refreshToken.toString());
 		
-		AuthCode oldCode = mockAuthCodeRepo.verifyCode(authorizationCode);
+		AuthCode oldCode = mockAuthCodeRepo.findByAuthorizationCode(authorizationCode);
 		
 		assertNull(oldCode, "Authorization Codes should be deleted after use");
 	}

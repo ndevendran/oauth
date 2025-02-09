@@ -5,6 +5,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
+import org.springframework.data.domain.Pageable;
+
 import com.nero.identity.oauth.data.AuthCode;
 import com.nero.identity.oauth.data.repositories.AuthCodeRepository;
 
@@ -37,8 +39,9 @@ public class StubAuthCodeRepository implements AuthCodeRepository {
 
 	@Override
 	public <S extends AuthCode> S save(S entity) {
-		// TODO Auto-generated method stub
-		return null;
+		AuthCode authCode = (AuthCode) entity;
+		database.put(entity.getAuthorizationCode(), entity);
+		return entity;
 	}
 
 	@Override
@@ -108,9 +111,38 @@ public class StubAuthCodeRepository implements AuthCodeRepository {
 	}
 
 	@Override
-	public List<AuthCode> findByAuthorizationCode(String authorizationCode) {
+	public AuthCode findByAuthorizationCode(String authorizationCode) {
+		return database.get(authorizationCode);
+	}
+
+	@Override
+	public List<AuthCode> findAllByOrderByAuthorizationCode() {
 		// TODO Auto-generated method stub
 		return null;
+	}
+
+	@Override
+	public List<AuthCode> findByAuthorizationCodeLike(String authorizationCode) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public List<AuthCode> findAll(Pageable pageable) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public List<AuthCode> findAllByOrderByAuthorizationCode(Pageable pageable) {
+		// TODO Auto-generated method stub
+		return null;
+	}
+
+	@Override
+	public void deleteByAuthorizationCode(String authorizationCode) {
+		// TODO Auto-generated method stub
+		database.remove(authorizationCode);
 	}
 
 }

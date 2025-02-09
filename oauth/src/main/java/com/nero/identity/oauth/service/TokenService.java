@@ -19,31 +19,31 @@ import com.nero.identity.oauth.data.TokenRequest;
 import com.nero.identity.oauth.data.repositories.AccessTokenRepository;
 import com.nero.identity.oauth.data.repositories.AuthCodeRepository;
 import com.nero.identity.oauth.data.repositories.ClientRepository;
-import com.nero.identity.oauth.data.repositories.RefreshTokenRepository;
+
+import jakarta.transaction.Transactional;
 
 @Service
 public class TokenService {
 	private AuthCodeRepository codeRepo;
 	private AccessTokenRepository accessTokenRepo;
-	private RefreshTokenRepository refreshTokenRepo;
 	private ClientRepository clientRepo;
 
 	@Autowired
 	public TokenService(AuthCodeRepository codeRepo, AccessTokenRepository accessTokenRepo, 
-			RefreshTokenRepository refreshTokenRepo, ClientRepository clientRepo) {
+			ClientRepository clientRepo) {
 		this.codeRepo = codeRepo;
 		this.accessTokenRepo = accessTokenRepo;
-		this.refreshTokenRepo = refreshTokenRepo;
 		this.clientRepo = clientRepo;
 	}
 	
+	@Transactional
 	public Token handleAuthorizationCode(String code, String clientId, String scope) {
-		AuthCode storedCode = this.codeRepo.verifyCode(code);
-		this.codeRepo.deleteCode(code);
+		AuthCode storedCode = this.codeRepo.findByAuthorizationCode(code);
+		this.codeRepo.deleteByAuthorizationCode(code);
 		
 		if(storedCode != null && storedCode.getClientId().equals(clientId)) {
 			String token = UUID.randomUUID().toString();
-			while(accessTokenRepo.getToken(token) != null) {
+			while(accessTokenRepo.findByToken(token) != null) {
 				token = UUID.randomUUID().toString();
 			}
 						
@@ -59,18 +59,13 @@ public class TokenService {
 			
 			//generate refresh token
 			token = UUID.randomUUID().toString();
-			while(refreshTokenRepo.getRefreshToken(token) != null) {
-				token = UUID.randomUUID().toString();
-			}
 			expirationTime = new Date(Date.from(Instant.now().plusSeconds(604800)).getTime());
 			RefreshToken refreshToken = new RefreshToken();
 			refreshToken.setToken(token);
-			refreshToken.setClientId(clientId);
 			refreshToken.setExpirationTime(expirationTime);
-			refreshToken.setScope(scope);
 			
-			refreshToken = refreshTokenRepo.saveRefreshToken(refreshToken);
-			refreshTokenRepo.updateRefreshTokenWithNewAccessToken(refreshToken.getId(), accessToken.getId());
+			accessToken.setRefreshToken(refreshToken);
+
 			
 			Token dbToken = new Token();
 			dbToken.setAccessToken(accessToken);
@@ -83,7 +78,13 @@ public class TokenService {
 	}
 	
 	public Token handleRefreshToken(String refreshToken) {
-		RefreshToken dbRefreshToken = refreshTokenRepo.getRefreshToken(refreshToken);
+		AccessToken oldAccessToken = accessTokenRepo.findByRefreshTokenToken(refreshToken);
+		
+		if(oldAccessToken == null) {
+			return null;
+		}
+		
+		RefreshToken dbRefreshToken = oldAccessToken.getRefreshToken();
 		
 		//check refresh token exists
 		if(dbRefreshToken == null) {
@@ -98,26 +99,19 @@ public class TokenService {
 		
 		//if everything is good generate a new access token
 		String token = UUID.randomUUID().toString();
-		while(accessTokenRepo.getToken(token) != null) {
+		while(accessTokenRepo.findByToken(token) != null) {
 			token = UUID.randomUUID().toString();
 		}
 					
 		AccessToken accessToken = new AccessToken();
 		accessToken.setToken(token);
-		accessToken.setClientId(dbRefreshToken.getClientId());
-		accessToken.setScope(dbRefreshToken.getScope());
+		accessToken.setClientId(oldAccessToken.getClientId());
+		accessToken.setScope(oldAccessToken.getScope());
 		Date expirationTime = new Date(Date.from(Instant.now().plusSeconds(86400)).getTime());
 		accessToken.setExpirationTime(expirationTime);
+		
+		accessToken.setRefreshToken(dbRefreshToken);
 		accessToken = accessTokenRepo.save(accessToken);
-		
-		//get reference to old access token id before we change binding
-		Long oldAccessTokenId = refreshTokenRepo.getAccessTokenId(dbRefreshToken.getId());
-		
-		//bind access token to refresh token
-		refreshTokenRepo.updateRefreshTokenWithNewAccessToken(dbRefreshToken.getId(), accessToken.getId());
-		
-		//now we can delete old access token
-		accessTokenRepo.deleteToken(oldAccessTokenId);
 		
 		//create the new token object and return it
 		Token tokenResponse = new Token();
@@ -130,7 +124,7 @@ public class TokenService {
 	public AuthCode generateAuthorizationCode(String clientId) {
 		UUID authorizationCode = UUID.randomUUID();
     	
-    	while(codeRepo.verifyCode(authorizationCode.toString()) != null) {
+    	while(codeRepo.findByAuthorizationCode(authorizationCode.toString()) != null) {
     		authorizationCode = UUID.randomUUID();
     	}
     	
@@ -139,7 +133,7 @@ public class TokenService {
     	code.setAuthorizationCode(authorizationCode.toString());
     	code.setClientId(clientId);
     	
-    	return codeRepo.saveCode(code);
+    	return codeRepo.save(code);
 	}
 	
 	public TokenRequest parseTokenRequest(Map<String, String> requestBody, String authHeader) {
@@ -179,7 +173,7 @@ public class TokenService {
     		clientSecret = client_secret;
     	}
     	
-    	Client client = clientRepo.findClient(clientId);
+    	Client client = clientRepo.findByClientId(UUID.fromString(clientId));
     	if(client == null) {
     		request.setError(true);
     		request.setErrorMessage("invalid_client");

@@ -16,7 +16,7 @@ import java.util.List;
 
 @SpringBootTest
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
-public class SpringDataJpaTests {
+public class AuthCodeSpringDataJpaTests {
 	@Autowired
 	AuthCodeRepository authCodeRepo;
 	
@@ -53,9 +53,9 @@ public class SpringDataJpaTests {
 	
 	@Test
 	void testFindByAuthorizationCode() {
-		List<AuthCode> codes = authCodeRepo.findByAuthorizationCode("testCode1");
-		assertNotNull(codes.get(0));
-		assertEquals("testCode1", codes.get(0).getAuthorizationCode());
+		AuthCode code = authCodeRepo.findByAuthorizationCode("testCode1");
+		assertNotNull(code);
+		assertEquals("testCode1", code.getAuthorizationCode());
 	}
 	
 	@Test
