@@ -11,6 +11,7 @@ import java.util.UUID;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -62,9 +63,13 @@ public class AuthorizationController {
 		while(this.clientRepo.findByClientId(clientId) != null){
 			clientId = UUID.randomUUID();
 		}
-		
+
 		client.setClientId(clientId);
-		return new ResponseEntity<>(this.clientRepo.save(client), HttpStatus.CREATED);
+		
+        HttpHeaders headers = new HttpHeaders();
+        headers.setContentType(MediaType.APPLICATION_JSON);
+        
+		return new ResponseEntity<>(this.clientRepo.save(client), headers, HttpStatus.CREATED);
 	}
 
     public static String generateClientSecret(int numBytes) {
@@ -90,8 +95,12 @@ public class AuthorizationController {
     
     @GetMapping("/user")
     @ResponseBody
-    public ResponseEntity<User> getUser(@RequestBody User user){
-    	User dbUser = userRepo.findUser(user.getUsername());
+    public ResponseEntity<User> getUser(@RequestBody Map<String, String> user){
+    	if(user.get("username") == null) {
+    		return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
+    	}
+    	
+    	User dbUser = userRepo.findUser(user.get("username"));
     	return new ResponseEntity<>(dbUser, HttpStatus.OK);
     }
     
