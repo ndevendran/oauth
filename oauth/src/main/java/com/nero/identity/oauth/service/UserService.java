@@ -21,7 +21,7 @@ public class UserService {
 	}
 	
 	public boolean login(String username, String password) {
-		User user = userRepo.findUser(username);
+		User user = userRepo.findUserByUsername(username);
 		if(user == null) {
 			return false;
 		}
@@ -39,7 +39,7 @@ public class UserService {
     		return null;
     	}
     	
-    	if(userRepo.findUser(user.getUsername()) != null) {
+    	if(userRepo.findUserByUsername(user.getUsername()) != null) {
     		return null;
     	}
     	
@@ -48,7 +48,7 @@ public class UserService {
     	}
 
 		user.setPassword(passwordEncoder.encode(user.getPassword()));
-    	User savedUser = userRepo.saveUser(user);
+    	User savedUser = userRepo.save(user);
     	return savedUser;
 		
 	}

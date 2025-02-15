@@ -100,7 +100,7 @@ public class AuthorizationController {
     		return new ResponseEntity<>(null, HttpStatus.BAD_REQUEST);
     	}
     	
-    	User dbUser = userRepo.findUser(user.get("username"));
+    	User dbUser = userRepo.findUserByUsername(user.get("username"));
     	return new ResponseEntity<>(dbUser, HttpStatus.OK);
     }
     

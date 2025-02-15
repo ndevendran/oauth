@@ -17,13 +17,13 @@ public class ClientService {
 	}
 	
 	public Client registerClient(Client client) {
-		return clientRepo.saveClient(client);
+		return clientRepo.save(client);
 	}
 	
 	public AuthCode generateAuthorizationCode(String clientId) {
 		UUID authorizationCode = UUID.randomUUID();
     	
-    	while(authCodeRepo.verifyCode(authorizationCode.toString()) != null) {
+    	while(authCodeRepo.findByAuthorizationCode(authorizationCode.toString()) != null) {
     		authorizationCode = UUID.randomUUID();
     	}
     	
@@ -32,6 +32,6 @@ public class ClientService {
     	code.setAuthorizationCode(authorizationCode.toString());
     	code.setClientId(clientId);
     	
-    	return authCodeRepo.saveCode(code);
+    	return authCodeRepo.save(code);
 	}
 }

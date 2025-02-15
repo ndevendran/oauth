@@ -16,22 +16,22 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.xpath;
-
 import org.springframework.http.MediaType;
 
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import com.nero.identity.oauth.AuthorizationController;
+import com.nero.identity.oauth.data.AuthCode;
 import com.nero.identity.oauth.data.Client;
 import com.nero.identity.oauth.data.User;
 import com.nero.identity.oauth.data.repositories.ClientRepository;
 import com.nero.identity.oauth.data.repositories.UserRepository;
+import com.nero.identity.oauth.service.TokenService;
 import com.nero.identity.oauth.service.UserService;
 
 @SpringBootTest
@@ -50,6 +50,9 @@ public class AuthorizationRestControllerTest {
 	
 	@Mock
 	private UserRepository userRepository;
+	
+	@Mock
+	private TokenService tokenService;
 	
 	@InjectMocks
 	private AuthorizationController authorizationController;
@@ -118,7 +121,7 @@ public class AuthorizationRestControllerTest {
 		user.setId(1L);
 		user.setPassword("test");
 		user.setUsername("testUser");
-		when(userRepository.findUser("testUser")).thenReturn(user);
+		when(userRepository.findUserByUsername("testUser")).thenReturn(user);
 		
 		String userJson =
 				"""
@@ -166,6 +169,29 @@ public class AuthorizationRestControllerTest {
 				.param("state", "5")
 				.param("responseType", "code"))
 				.andExpect(status().isOk());
+	}
+	
+	@Test
+	void testApproveEndpoint() throws Exception {
+		when(userService.login("testUser", "test")).thenReturn(true);
+		
+		AuthCode code = new AuthCode();
+		code.setAuthorizationCode("test_code");
+		when(tokenService.generateAuthorizationCode(any())).thenReturn(code);
+		
+		mvc.perform(post("/approve")
+				.param("username", "testUser")
+				.param("password", "test")
+				.sessionAttr("responseType", "code")
+				.sessionAttr("redirectUri", "http://www.fake.com"))
+		.andExpect(status().isFound())
+		.andExpect(header().string("Location", "http://www.fake.com?code=test_code"));
+
+	}
+	
+	@Test
+	void testTokenEndpoint() throws Exception {
+		
 	}
 	
 	
